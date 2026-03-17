@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, RotateCcw } from "lucide-react";
 import type {
   CalendarButtonRendererProps,
   CalendarClassNames,
@@ -101,7 +102,7 @@ const DEFAULT_CLASSNAMES: CalendarClassNames = {
   list: "calendar-list",
   subtitle: "calendar-subtitle",
   empty: "calendar-empty",
-  resetButton: "calendar-button",
+  resetButton: "calendar-button calendar-reset-button",
 };
 
 function cn(...parts: Array<string | undefined | false>): string {
@@ -175,44 +176,89 @@ function getDefaultFilterConfigs(
   priorityOptions: CalendarFilterOption<EventPriority>[],
   typeOptions: CalendarFilterOption<EventType>[],
 ): CalendarFilterConfig[] {
+  const allOption: CalendarFilterOption<string> = { value: "", label: "All" };
   return [
     {
-      id: "search",
-      label: "Search",
+      id: "searchClients",
+      label: "Search clients",
       input: "text",
-      placeholder: "Search title, client, assignee",
-      bindTo: "search",
+      placeholder: "Search clients...",
+      predicate: (event, value) => {
+        const query = String(value ?? "").trim().toLowerCase();
+        if (!query) return true;
+        return event.client.toLowerCase().includes(query);
+      },
       row: 1,
     },
     {
-      id: "onlyMine",
-      label: "Only my events",
-      input: "toggle",
-      bindTo: "onlyMine",
+      id: "searchUsers",
+      label: "Search users",
+      input: "text",
+      placeholder: "Search users...",
+      predicate: (event, value) => {
+        const query = String(value ?? "").trim().toLowerCase();
+        if (!query) return true;
+        return event.assignee.toLowerCase().includes(query);
+      },
       row: 1,
     },
     {
       id: "statuses",
       label: "Status",
-      input: "chips-multi",
+      input: "single-select",
       bindTo: "statuses",
-      options: statusOptions.map((item) => ({ value: item.value, label: item.label, color: item.color })),
-      row: 2,
+      defaultValue: "",
+      options: [
+        allOption,
+        ...statusOptions.map((item) => ({ value: item.value, label: item.label, color: item.color })),
+      ],
+      row: 1,
     },
     {
       id: "priorities",
       label: "Priority",
-      input: "chips-multi",
+      input: "single-select",
       bindTo: "priorities",
-      options: priorityOptions.map((item) => ({ value: item.value, label: item.label, color: item.color })),
-      row: 2,
+      defaultValue: "",
+      options: [
+        allOption,
+        ...priorityOptions.map((item) => ({ value: item.value, label: item.label, color: item.color })),
+      ],
+      row: 1,
     },
     {
       id: "types",
       label: "Type",
-      input: "chips-multi",
+      input: "single-select",
       bindTo: "types",
-      options: typeOptions.map((item) => ({ value: item.value, label: item.label, color: item.color })),
+      defaultValue: "",
+      options: [
+        allOption,
+        ...typeOptions.map((item) => ({ value: item.value, label: item.label, color: item.color })),
+      ],
+      row: 1,
+    },
+    {
+      id: "onlyCritical",
+      label: "Solo priorita critica",
+      input: "toggle",
+      defaultValue: false,
+      predicate: (event, value) => (!Boolean(value) ? true : event.priority === "critical"),
+      row: 2,
+    },
+    {
+      id: "hideCompleted",
+      label: "Nascondi completate",
+      input: "toggle",
+      defaultValue: false,
+      predicate: (event, value) => (!Boolean(value) ? true : event.status !== "completed"),
+      row: 2,
+    },
+    {
+      id: "onlyMine",
+      label: "Solo assegnate a me",
+      input: "toggle",
+      bindTo: "onlyMine",
       row: 2,
     },
   ];
@@ -233,15 +279,24 @@ function buildInitialFilterValues(
       return;
     }
     if (config.bindTo === "statuses") {
-      values[config.id] = defaultFilters?.statuses ?? (config.options?.map((item) => item.value) ?? []);
+      values[config.id] =
+        config.input === "single-select" || config.input === "chips-single"
+          ? (defaultFilters?.statuses?.[0] ?? "")
+          : (defaultFilters?.statuses ?? (config.options?.map((item) => item.value) ?? []));
       return;
     }
     if (config.bindTo === "priorities") {
-      values[config.id] = defaultFilters?.priorities ?? (config.options?.map((item) => item.value) ?? []);
+      values[config.id] =
+        config.input === "single-select" || config.input === "chips-single"
+          ? (defaultFilters?.priorities?.[0] ?? "")
+          : (defaultFilters?.priorities ?? (config.options?.map((item) => item.value) ?? []));
       return;
     }
     if (config.bindTo === "types") {
-      values[config.id] = defaultFilters?.types ?? (config.options?.map((item) => item.value) ?? []);
+      values[config.id] =
+        config.input === "single-select" || config.input === "chips-single"
+          ? (defaultFilters?.types?.[0] ?? "")
+          : (defaultFilters?.types ?? (config.options?.map((item) => item.value) ?? []));
       return;
     }
     if (config.defaultValue !== undefined) {
@@ -310,7 +365,7 @@ export function Calendar({
   locale = "en-US",
   weekStartsOn = 1,
   showFilters = true,
-  showSummary = false,
+  showSummary = true,
   showLegend = true,
   summaryCards,
   legendItems,
@@ -345,6 +400,7 @@ export function Calendar({
 }: CalendarProps) {
   const [view, setView] = useState<CalendarView>(initialView);
   const [activeDate, setActiveDate] = useState<Date>(startOfDay(initialDate));
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
 
   const filterConfigs = useMemo(
     () => filters ?? getDefaultFilterConfigs(statusOptions, priorityOptions, typeOptions),
@@ -396,14 +452,17 @@ export function Calendar({
             return currentUser ? event.assignee === currentUser : true;
           }
           if (config.bindTo === "statuses") {
+            if (typeof value === "string") return value ? event.status === value : true;
             const allowed = Array.isArray(value) ? value : [];
             return allowed.length === 0 ? false : allowed.includes(event.status);
           }
           if (config.bindTo === "priorities") {
+            if (typeof value === "string") return value ? event.priority === value : true;
             const allowed = Array.isArray(value) ? value : [];
             return allowed.length === 0 ? false : allowed.includes(event.priority);
           }
           if (config.bindTo === "types") {
+            if (typeof value === "string") return value ? event.type === value : true;
             const allowed = Array.isArray(value) ? value : [];
             return allowed.length === 0 ? false : allowed.includes(event.type);
           }
@@ -474,6 +533,16 @@ export function Calendar({
         id: "critical",
         label: priorityOptions.find((item) => item.value === "critical")?.label ?? "Critical",
         color: priorityColors.critical ?? "var(--calendar-priority-critical)",
+      },
+      {
+        id: "call",
+        label: "Call",
+        color: "#0d9a6b",
+      },
+      {
+        id: "task",
+        label: "Task",
+        color: "#4f46e5",
       },
     ];
   }, [legendItems, priorityColors.critical, priorityColors.high, priorityColors.normal, priorityOptions]);
@@ -737,7 +806,10 @@ export function Calendar({
           renderEventContent(eventItem)
         ) : (
           <span className={classes.eventContent}>
-            <span className={classes.eventTitle}>{eventItem.title}</span>
+            <span className="calendar-event-main">
+              <span className="calendar-event-marker-dot" style={{ background: eventColor }} />
+              <span className={classes.eventTitle}>{eventItem.title}</span>
+            </span>
             <span className={classes.eventTime}>
               {eventItem.start}-{eventItem.end}
             </span>
@@ -811,81 +883,118 @@ export function Calendar({
         </section>
       )}
 
-      {showFilters && (
-        <section className={classes.filters} aria-label="Filters">
-          {filterRows.map((row, rowIndex) => (
-            <div key={rowIndex} className={classes.filterRow}>
-              {row.map((config) => (
-                <div key={config.id} className={classes.filterItem}>
-                  {config.input !== "toggle" && (
-                    <label className={classes.filterLabel}>{config.label}</label>
-                  )}
-                  {renderFilterControl(config)}
-                </div>
-              ))}
-              {rowIndex === 0 && (
-                renderButton({
-                  className: classes.resetButton,
-                  onClick: resetFilters,
-                  children: "Reset Filters",
-                })
-              )}
+      <div className="calendar-main-card">
+        {showFilters && (
+          <section className={classes.filters} aria-label="Filters">
+            <div className="calendar-filters-heading">
+              <div className="calendar-filters-title">
+                <span className="calendar-filters-icon">
+                  <Filter size={15} strokeWidth={1.9} />
+                </span>
+                <span>Filters</span>
+              </div>
+              <button
+                type="button"
+                className="calendar-filters-collapse"
+                aria-expanded={!filtersCollapsed}
+                aria-controls="calendar-filters-body"
+                onClick={() => setFiltersCollapsed((prev) => !prev)}
+              >
+                <span>{filtersCollapsed ? "Mostra" : "Nascondi"}</span>
+                <span className={cn("calendar-filters-collapse-arrow", filtersCollapsed && "is-collapsed")}>
+                  <ChevronDown size={13} strokeWidth={1.9} />
+                </span>
+              </button>
             </div>
-          ))}
-        </section>
-      )}
+            {!filtersCollapsed && (
+              <div id="calendar-filters-body" className="calendar-filters-body">
+                {filterRows.map((row, rowIndex) => (
+                  <div key={rowIndex} className={classes.filterRow}>
+                    {row.map((config) => (
+                      <div key={config.id} className={classes.filterItem}>
+                        {config.input !== "toggle" && (
+                          <label className={classes.filterLabel}>{config.label}</label>
+                        )}
+                        {renderFilterControl(config)}
+                      </div>
+                    ))}
+                    {rowIndex === 0 && (
+                      <div className={cn(classes.filterItem, "calendar-filter-item-reset")}>
+                        <span className={cn(classes.filterLabel, "calendar-filter-label-spacer")} aria-hidden="true">
+                          .
+                        </span>
+                        {renderButton({
+                          className: classes.resetButton,
+                          onClick: resetFilters,
+                          children: (
+                            <>
+                              <RotateCcw size={13} strokeWidth={1.9} />
+                              <span>Reset filtri</span>
+                            </>
+                          ),
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
-      <header className={classes.header}>
-        <div className={classes.nav} role="group" aria-label="Calendar navigation">
-          {renderButton({
-            className: classes.navButton,
-            onClick: goToPrevious,
-            ariaLabel: "Go to previous period",
-            children: "Prev",
-          })}
-          {renderButton({
-            className: classes.navButton,
-            onClick: goToToday,
-            ariaLabel: "Go to today",
-            children: "Today",
-          })}
-          {renderButton({
-            className: classes.navButton,
-            onClick: goToNext,
-            ariaLabel: "Go to next period",
-            children: "Next",
-          })}
-        </div>
-        <h2 className={classes.title}>{label}</h2>
-        <div className={classes.views} role="tablist" aria-label="Calendar views">
-          {VIEW_OPTIONS.map((viewOption) => (
-            <React.Fragment key={viewOption}>
+        <header className={classes.header}>
+          <div className="calendar-header-left">
+            <div className={classes.nav} role="group" aria-label="Calendar navigation">
               {renderButton({
-                className: cn(classes.viewButton, view === viewOption && classes.viewButtonActive),
-                active: view === viewOption,
-                role: "tab",
-                ariaSelected: view === viewOption,
-                onClick: () => setView(viewOption),
-                children: viewOption,
+                className: cn(classes.navButton, "calendar-nav-icon-button"),
+                onClick: goToPrevious,
+                ariaLabel: "Go to previous period",
+                children: <ChevronLeft size={15} strokeWidth={1.75} />,
               })}
-            </React.Fragment>
-          ))}
-        </div>
-      </header>
+              {renderButton({
+                className: cn(classes.navButton, "calendar-nav-today-button"),
+                onClick: goToToday,
+                ariaLabel: "Go to today",
+                children: "Today",
+              })}
+              {renderButton({
+                className: cn(classes.navButton, "calendar-nav-icon-button"),
+                onClick: goToNext,
+                ariaLabel: "Go to next period",
+                children: <ChevronRight size={15} strokeWidth={1.75} />,
+              })}
+            </div>
+            <h2 className={classes.title}>{label}</h2>
+          </div>
+          <div className={classes.views} role="tablist" aria-label="Calendar views">
+            {VIEW_OPTIONS.map((viewOption) => (
+              <React.Fragment key={viewOption}>
+                {renderButton({
+                  className: cn(classes.viewButton, view === viewOption && classes.viewButtonActive),
+                  active: view === viewOption,
+                  role: "tab",
+                  ariaSelected: view === viewOption,
+                  onClick: () => setView(viewOption),
+                  children: viewOption.charAt(0).toUpperCase() + viewOption.slice(1),
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        </header>
 
-      {showLegend && (
-        <div className={classes.toolbar} aria-label="Legend">
-          {resolvedLegendItems.map((item) => (
-            <span key={item.id} className={classes.legendItem}>
-              <span className={classes.legendDot} style={{ background: item.color }} />
-              {item.label}
-            </span>
-          ))}
-          <span className={classes.visibleCount}>{visibleEventsLabel(filteredEvents.length)}</span>
-        </div>
-      )}
+        {showLegend && (
+          <div className={classes.toolbar} aria-label="Legend">
+            {resolvedLegendItems.map((item) => (
+              <span key={item.id} className={classes.legendItem}>
+                <span className={classes.legendDot} style={{ background: item.color }} />
+                {item.label}
+              </span>
+            ))}
+            <span className={classes.visibleCount}>{visibleEventsLabel(filteredEvents.length)}</span>
+          </div>
+        )}
 
-      <div className={classes.body} onKeyDown={handleKeyboardDateNavigation} tabIndex={0} aria-label="Calendar content">
+        <div className={classes.body} onKeyDown={handleKeyboardDateNavigation} tabIndex={0} aria-label="Calendar content">
         {view === "month" && (
           <>
             <div className={classes.weekdays} aria-hidden="true">
@@ -969,6 +1078,7 @@ export function Calendar({
             {filteredEvents.map(renderEvent)}
           </section>
         )}
+        </div>
       </div>
     </section>
   );

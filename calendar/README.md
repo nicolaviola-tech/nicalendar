@@ -1,22 +1,38 @@
 # @nicola9779/nicalendar-custom
 
-Reusable React calendar library with:
-- `month`, `week`, `day`, `agenda` views
-- fully prop-driven data (no fetch inside)
-- customizable filters, tags, event colors, summary cards
-- self-contained CSS (`@nicola9779/nicalendar-custom/styles.css`)
+Reusable React calendar library with an opinionated default UI and full customization APIs.
+
+## What You Get
+
+- Views: `month`, `week`, `day`, `agenda`
+- One main layout card by default:
+  - filters section
+  - calendar toolbar (`prev/today/next + month label + view tabs`)
+  - legend
+  - calendar grid/list
+- Summary KPI cards (enabled by default)
+- Filter system with custom input type + custom predicates
+- Self-contained style via `@nicola9779/nicalendar-custom/styles.css`
+- Runtime customization via:
+  - `filters`
+  - `summaryCards`
+  - `legendItems`
+  - `theme`
+  - `classNames`
+  - `renderers`
 
 ## Install
 
 ```bash
-npm install @nicola9779/nicalendar-custom
+npm i @nicola9779/nicalendar-custom
 ```
 
 Peer dependencies:
+
 - `react` `^18 || ^19`
 - `react-dom` `^18 || ^19`
 
-## Basic Usage
+## Quick Start
 
 ```tsx
 import { Calendar, type CalendarEvent } from "@nicola9779/nicalendar-custom";
@@ -25,215 +41,153 @@ import "@nicola9779/nicalendar-custom/styles.css";
 const events: CalendarEvent[] = [
   {
     id: "1",
-    title: "Kickoff",
+    title: "Policy renewal",
     date: new Date(),
     start: "10:00",
     end: "11:00",
-    client: "ACME",
+    client: "Northwind Corp",
     assignee: "Nico",
     status: "pending",
-    priority: "high",
+    priority: "normal",
     type: "manual",
-    tags: [{ id: "tag-1", label: "Client", color: "#e6f0ff", textColor: "#1d4ed8" }],
   },
 ];
 
 export default function App() {
-  return <Calendar events={events} initialView="month" currentUser="Nico" />;
+  return (
+    <Calendar
+      events={events}
+      initialView="month"
+      currentUser="Nico"
+      showSummary
+      showFilters
+      showLegend
+    />
+  );
 }
 ```
 
-If you want full Tailwind control in your app, do not import `@nicola9779/nicalendar-custom/styles.css` and pass `classNames` + `renderers`.
+## Default Behaviors
 
-## Main Props
+- `showSummary`: `true`
+- `showFilters`: `true`
+- `showLegend`: `true`
+- Filter section is collapsible (`Nascondi/Mostra`)
+- Legend defaults include: `Normal`, `High`, `Critical`, `Call`, `Task`
+- Event marker uses a colored dot based on `eventColorMode`
 
-- `events: CalendarEvent[]` Required.
-- `showSummary?: boolean` Show/hide top cards.
-- `summaryCards?: CalendarSummaryCard[]` Custom card data. If omitted and `showSummary=true`, default cards are auto-generated.
-- `showFilters?: boolean` Show/hide filters section.
-- `showLegend?: boolean` Show/hide legend.
-- `filters?: CalendarFilterConfig[]` Fully custom filters (name + input type + logic).
-- `onFilterValuesChange?: (values) => void` Get full custom filter state.
-- `legendItems?: CalendarLegendItem[]` Full custom legend row (label + color).
-- `visibleEventsLabel?: (count) => string` Custom text for visible-events chip.
-- `classNames?: Partial<CalendarClassNames>` Slot-based class override (ideal for Tailwind).
-- `renderers?: CalendarRenderers` Replace controls with your UI components.
-- `statusOptions?: CalendarFilterOption<EventStatus>[]` Custom status filter labels/colors.
-- `priorityOptions?: CalendarFilterOption<EventPriority>[]` Custom priority filter labels/colors.
-- `typeOptions?: CalendarFilterOption<EventType>[]` Custom type filter labels/colors.
-- `eventColorMode?: "priority" | "status" | "type" | "custom"` Event color source.
-- `priorityColors?: Partial<Record<EventPriority, string>>` Priority palette.
-- `statusColors?: Partial<Record<EventStatus, string>>` Status palette.
-- `typeColors?: Partial<Record<EventType, string>>` Type palette.
-- `theme?: Partial<CalendarThemeTokens>` Override all UI tokens (buttons/chips/panels/text/etc).
-- `renderEventContent?: (event) => ReactNode` Full custom event rendering.
+## Custom Summary Cards
 
-## Fully Custom Filters (Names + Input Type + Logic)
+```tsx
+<Calendar
+  events={events}
+  summaryCards={[
+    { id: "due", label: "Due This Week", value: 7, color: "#2563eb" },
+    { id: "overdue", label: "Overdue", value: 2, color: "#e11d48" },
+    { id: "pending", label: "Pending", value: 11, color: "#f59e0b" },
+    { id: "completed", label: "Completed", value: 4, color: "#16a34a" },
+  ]}
+/>
+```
 
-`filters` gives full control:
-- choose filter name (`label`)
-- choose input type (`text`, `toggle`, `single-select`, `multi-select`, `chips-single`, `chips-multi`)
-- bind to built-in pipeline (`bindTo`) or provide your own `predicate`
+## Custom Filters (names + input type + logic)
 
 ```tsx
 import type { CalendarFilterConfig } from "@nicola9779/nicalendar-custom";
 
 const filters: CalendarFilterConfig[] = [
   {
-    id: "q",
-    label: "Search Clients",
+    id: "clientSearch",
+    label: "Filtro Clienti",
     input: "text",
-    placeholder: "Type client name...",
-    bindTo: "search",
+    placeholder: "Search clients...",
     row: 1,
+    predicate: (event, value) => {
+      const q = String(value ?? "").trim().toLowerCase();
+      return !q || event.client.toLowerCase().includes(q);
+    },
   },
   {
-    id: "mine",
-    label: "Assigned to me",
+    id: "status",
+    label: "Status",
+    input: "single-select",
+    row: 1,
+    options: [
+      { value: "", label: "All" },
+      { value: "pending", label: "Pending" },
+      { value: "overdue", label: "Overdue" },
+      { value: "completed", label: "Completed" },
+    ],
+    bindTo: "statuses",
+    defaultValue: "",
+  },
+  {
+    id: "onlyMine",
+    label: "Solo assegnate a me",
     input: "toggle",
     bindTo: "onlyMine",
-    row: 1,
-  },
-  {
-    id: "st",
-    label: "Workflow Status",
-    input: "chips-multi",
-    bindTo: "statuses",
-    options: [
-      { value: "pending", label: "To Do", color: "#2563eb" },
-      { value: "overdue", label: "Late", color: "#e11d48" },
-      { value: "completed", label: "Done", color: "#16a34a" },
-    ],
     row: 2,
-  },
-  {
-    id: "customerTier",
-    label: "Tier",
-    input: "single-select",
-    options: [
-      { value: "enterprise", label: "Enterprise" },
-      { value: "startup", label: "Startup" },
-    ],
-    row: 2,
-    predicate: (event, value) => {
-      if (!value) return true;
-      if (value === "enterprise") return event.client.toLowerCase().includes("corp");
-      return event.client.toLowerCase().includes("lab");
-    },
   },
 ];
 
 <Calendar events={events} filters={filters} />
 ```
 
-### `bindTo` values
-- `"search"`
-- `"onlyMine"`
-- `"statuses"`
-- `"priorities"`
-- `"types"`
-
-If you do not use `bindTo`, use `predicate` to define custom behavior.
-
-## Custom Legend (Tags Row Like Your Screenshot)
+## Theme Tokens
 
 ```tsx
 <Calendar
   events={events}
-  showLegend
-  legendItems={[
-    { id: "n", label: "Normal", color: "#356fe3" },
-    { id: "h", label: "High", color: "#f59e0b" },
-    { id: "c", label: "Critical", color: "#e11d48" },
-  ]}
-  visibleEventsLabel={(count) => `${count} visible events`}
+  theme={{
+    background: "#eef2f8",
+    panel: "#ffffff",
+    panelStrong: "#f7f9fc",
+    border: "#d3dceb",
+    text: "#1e293b",
+    muted: "#64748b",
+    accent: "#2563eb",
+    accentSoft: "#e8efff",
+    chipBackground: "#f8fafc",
+    buttonBackground: "#ffffff",
+  }}
 />
 ```
 
-## Exact Integration Mode (Use Your Own shadcn Components)
+## Bring Your Own UI (shadcn/radix/custom)
 
-If you want it to look exactly like your app, pass your own UI primitives via `renderers`.
+Use `renderers` to replace default controls/components.
 
 ```tsx
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-
 <Calendar
   events={events}
   renderers={{
-    Button: ({ children, className, onClick, ariaLabel }) => (
-      <Button variant="outline" className={className} onClick={onClick} aria-label={ariaLabel}>
+    Button: ({ className, children, onClick, ariaLabel }) => (
+      <button type="button" className={className} onClick={onClick} aria-label={ariaLabel}>
         {children}
-      </Button>
-    ),
-    Input: ({ value, onChange, placeholder, className, ariaLabel }) => (
-      <Input
-        className={className}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        aria-label={ariaLabel}
-      />
-    ),
-    Switch: ({ checked, onChange, label, className, ariaLabel }) => (
-      <label className={className}>
-        <Switch checked={checked} onCheckedChange={onChange} aria-label={ariaLabel} />
-        <span>{label}</span>
-      </label>
-    ),
-    Select: ({ value, onChange, options, className }) => (
-      <Select value={String(value)} onValueChange={(v) => onChange(v)}>
-        <SelectTrigger className={className}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      </button>
     ),
   }}
 />
 ```
 
-## Tailwind Slot Mapping (Your `calendarStyles` Object)
+## Core Props
 
-You can map your style object directly:
+- `events: CalendarEvent[]` (required)
+- `onEventClick?: (event: CalendarEvent) => void`
+- `initialView?: "month" | "week" | "day" | "agenda"`
+- `currentUser?: string`
+- `showSummary?: boolean`
+- `showFilters?: boolean`
+- `showLegend?: boolean`
+- `summaryCards?: CalendarSummaryCard[]`
+- `legendItems?: CalendarLegendItem[]`
+- `filters?: CalendarFilterConfig[]`
+- `eventColorMode?: "priority" | "status" | "type" | "custom"`
+- `classNames?: Partial<CalendarClassNames>`
+- `renderers?: CalendarRenderers`
+- `theme?: Partial<CalendarThemeTokens>`
 
-```tsx
-import { Calendar } from "@nicola9779/nicalendar-custom";
-
-export const calendarStyles = {
-  page: "space-y-6",
-  header: "flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between",
-  periodToolbar: "flex flex-col gap-4 rounded-xl border bg-card p-4 lg:flex-row lg:items-center lg:justify-between",
-  legend: "flex flex-wrap items-center gap-x-5 gap-y-2 text-sm",
-  monthGrid: "grid min-w-[980px] grid-cols-7 border",
-  monthHeaderCell: "border-b border-r bg-muted/50 px-3 py-2 text-center text-sm font-semibold last:border-r-0",
-  monthCell: "min-h-[140px] border-b border-r p-2",
-  monthEventButton: "w-full rounded-md border bg-background px-2 py-1 text-left text-xs hover:bg-muted",
-} as const;
-
-<Calendar
-  events={events}
-  classNames={{
-    page: calendarStyles.page,
-    header: calendarStyles.header,
-    toolbar: calendarStyles.legend,
-    monthGrid: calendarStyles.monthGrid,
-    weekday: calendarStyles.monthHeaderCell,
-    cell: calendarStyles.monthCell,
-    eventButton: calendarStyles.monthEventButton,
-  }}
-/>
-```
-
-## Event Shape
+## Event Type
 
 ```ts
 type CalendarEvent = {
@@ -247,66 +201,27 @@ type CalendarEvent = {
   status: "pending" | "overdue" | "completed";
   priority: "normal" | "high" | "critical";
   type: "manual" | "recurring" | "system";
-  color?: string; // used when eventColorMode="custom"
-  tags?: {
-    id: string;
-    label: string;
-    color?: string;
-    textColor?: string;
-  }[];
+  color?: string;
+  tags?: { id: string; label: string; color?: string; textColor?: string }[];
 };
 ```
 
-## Summary Cards
-
-Use cards only when needed:
-
-```tsx
-<Calendar
-  events={events}
-  showSummary={true}
-  summaryCards={[
-    { id: "open", label: "Open", value: 14, color: "#2563eb" },
-    { id: "late", label: "Late", value: 3, color: "#e11d48" },
-  ]}
-/>
-```
-
-## Theme Example (Base White -> Custom)
-
-```tsx
-<Calendar
-  events={events}
-  theme={{
-    background: "#ffffff",
-    panel: "#f8fafc",
-    panelStrong: "#f3f7ff",
-    border: "#d9e1ef",
-    text: "#17233a",
-    muted: "#5f7192",
-    accent: "#2f6fed",
-    accentSoft: "#e9f0ff",
-    focus: "#2f6fed",
-    chipBackground: "#f4f7fc",
-    buttonBackground: "#ffffff",
-    priorityNormal: "#2f6fed",
-    priorityHigh: "#f59e0b",
-    priorityCritical: "#e11d48",
-    success: "#16a34a",
-    warning: "#f59e0b",
-    danger: "#e11d48",
-  }}
-/>
-```
-
-## Build
+## Development
 
 ```bash
 npm run typecheck
 npm run build
 ```
 
-Output:
-- ESM + CJS bundles
-- TypeScript declarations
-- CSS bundle exported as `@nicola9779/nicalendar-custom/styles.css`
+## Troubleshooting (important for local dev)
+
+If you update library styles and do not see changes in `playground`, clear Vite cache and force reload:
+
+```bash
+cd ../calendar
+npm run build
+
+cd ../playground
+rm -rf node_modules/.vite
+npm run dev -- --force
+```

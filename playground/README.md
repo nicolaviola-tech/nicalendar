@@ -1,4 +1,4 @@
-# Playground - @nicalendar/custom
+# Playground - @nicola9779/nicalendar-custom
 
 App demo per sviluppare e validare visivamente il calendario.
 
@@ -26,7 +26,7 @@ npm run build
 Questo playground usa la libreria locale:
 
 ```json
-"@nicalendar/custom": "file:../calendar"
+"@nicola9779/nicalendar-custom": "file:../calendar"
 ```
 
 Così ogni modifica in `../calendar` è immediatamente testabile qui.

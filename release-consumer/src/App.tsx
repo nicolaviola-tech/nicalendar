@@ -1,5 +1,5 @@
-import { Calendar, type CalendarEvent } from "@nicalendar/custom";
-import "@nicalendar/custom/styles.css";
+import { Calendar, type CalendarEvent } from "@nicola9779/nicalendar-custom";
+import "@nicola9779/nicalendar-custom/styles.css";
 
 const now = new Date();
 const events: CalendarEvent[] = [

@@ -22,6 +22,9 @@
   "sideEffects": [
     "**/*.css"
   ],
+  "dependencies": {
+    "lucide-react": "^0.577.0"
+  },
   "scripts": {
     "build": "tsup index.ts --format esm,cjs --dts --sourcemap",
     "dev": "tsup index.ts --format esm,cjs --dts --watch",

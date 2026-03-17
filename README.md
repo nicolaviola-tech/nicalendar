@@ -3,17 +3,18 @@
 Calendario React riutilizzabile, estratto come libreria standalone.
 
 Repository con 3 parti:
-- `calendar`: libreria pubblicabile (`@nicalendar/custom`)
+- `calendar`: libreria pubblicabile (`@nicola9779/nicalendar-custom`)
 - `playground`: app demo per sviluppo e test visivo
 - `release-consumer`: app minimale per smoke test da consumer esterno
 
 ## Cosa fa la libreria
 
-`@nicalendar/custom` include:
+`@nicola9779/nicalendar-custom` include:
 - viste `month`, `week`, `day`, `agenda`
+- layout default in card unica (filtri + toolbar mese + legenda + griglia)
 - pipeline filtri completa (testo, select, multi-select, chips, toggle)
 - eventi completamente guidati da `props` (nessun fetch interno)
-- styling self-contained tramite `@nicalendar/custom/styles.css`
+- styling self-contained tramite `@nicola9779/nicalendar-custom/styles.css`
 - personalizzazione avanzata via `classNames`, `renderers`, `theme`, `filters`, `legendItems`
 
 ## Struttura repo
@@ -54,7 +55,7 @@ npm run dev
 Il playground usa dipendenza locale:
 
 ```json
-"@nicalendar/custom": "file:../calendar"
+"@nicola9779/nicalendar-custom": "file:../calendar"
 ```
 
 quindi riflette subito le modifiche della libreria.
@@ -62,12 +63,12 @@ quindi riflette subito le modifiche della libreria.
 ## Come usare la libreria in un progetto React
 
 ```bash
-npm i @nicalendar/custom
+npm i @nicola9779/nicalendar-custom
 ```
 
 ```tsx
-import { Calendar, type CalendarEvent } from "@nicalendar/custom";
-import "@nicalendar/custom/styles.css";
+import { Calendar, type CalendarEvent } from "@nicola9779/nicalendar-custom";
+import "@nicola9779/nicalendar-custom/styles.css";
 
 const events: CalendarEvent[] = [
   {
