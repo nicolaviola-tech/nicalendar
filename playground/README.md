@@ -1,73 +1,49 @@
-# React + TypeScript + Vite
+# Playground - @nicalendar/custom
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+App demo per sviluppare e validare visivamente il calendario.
 
-Currently, two official plugins are available:
+## Scopo
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- provare rapidamente nuove modifiche della libreria
+- testare stile, filtri, renderers e classNames
+- verificare che il componente resti integrabile in un'app reale
 
-## React Compiler
+## Avvio
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Build produzione locale:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+npm run build
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Collegamento libreria
+
+Questo playground usa la libreria locale:
+
+```json
+"@nicalendar/custom": "file:../calendar"
+```
+
+Così ogni modifica in `../calendar` è immediatamente testabile qui.
+
+## File principale demo
+
+- `src/App.tsx`: configurazione completa con:
+  - filtri custom
+  - renderers custom (bottoni/input/select/switch)
+  - classNames custom (stile Tailwind-like)
+  - legenda custom
+
+## Note utili
+
+- Se vedi errori di import Vite, esegui `npm install` nel playground dopo modifiche a `calendar/package.json`.
+- Se una porta è occupata, usa:
+
+```bash
+npm run dev -- --port 4174
 ```
