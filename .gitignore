@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# logs
+*.log
+npm-debug.log*
+
+# env
+.env
+.env.*
+
+# dependencies
+**/node_modules/
+
+# build outputs
+**/dist/
+**/coverage/
+**/.turbo/
+**/.cache/
+
+# editor
+.vscode/
+.idea/
