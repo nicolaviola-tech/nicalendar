@@ -1,15 +1,15 @@
-# @nicalendar/custom
+# @nicola9779/nicalendar-custom
 
 Reusable React calendar library with:
 - `month`, `week`, `day`, `agenda` views
 - fully prop-driven data (no fetch inside)
 - customizable filters, tags, event colors, summary cards
-- self-contained CSS (`@nicalendar/custom/styles.css`)
+- self-contained CSS (`@nicola9779/nicalendar-custom/styles.css`)
 
 ## Install
 
 ```bash
-npm install @nicalendar/custom
+npm install @nicola9779/nicalendar-custom
 ```
 
 Peer dependencies:
@@ -19,8 +19,8 @@ Peer dependencies:
 ## Basic Usage
 
 ```tsx
-import { Calendar, type CalendarEvent } from "@nicalendar/custom";
-import "@nicalendar/custom/styles.css";
+import { Calendar, type CalendarEvent } from "@nicola9779/nicalendar-custom";
+import "@nicola9779/nicalendar-custom/styles.css";
 
 const events: CalendarEvent[] = [
   {
@@ -43,7 +43,7 @@ export default function App() {
 }
 ```
 
-If you want full Tailwind control in your app, do not import `@nicalendar/custom/styles.css` and pass `classNames` + `renderers`.
+If you want full Tailwind control in your app, do not import `@nicola9779/nicalendar-custom/styles.css` and pass `classNames` + `renderers`.
 
 ## Main Props
 
@@ -76,7 +76,7 @@ If you want full Tailwind control in your app, do not import `@nicalendar/custom
 - bind to built-in pipeline (`bindTo`) or provide your own `predicate`
 
 ```tsx
-import type { CalendarFilterConfig } from "@nicalendar/custom";
+import type { CalendarFilterConfig } from "@nicola9779/nicalendar-custom";
 
 const filters: CalendarFilterConfig[] = [
   {
@@ -206,7 +206,7 @@ import { Switch } from "@/components/ui/switch";
 You can map your style object directly:
 
 ```tsx
-import { Calendar } from "@nicalendar/custom";
+import { Calendar } from "@nicola9779/nicalendar-custom";
 
 export const calendarStyles = {
   page: "space-y-6",
@@ -309,4 +309,4 @@ npm run build
 Output:
 - ESM + CJS bundles
 - TypeScript declarations
-- CSS bundle exported as `@nicalendar/custom/styles.css`
+- CSS bundle exported as `@nicola9779/nicalendar-custom/styles.css`
