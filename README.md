@@ -141,22 +141,54 @@ cd release-consumer
 npm run build
 ```
 
-## Publish
+## Release & Distribution (best practice)
 
-### NPM
+### 1) Setup GitHub secrets (una volta sola)
+
+Nel repo GitHub `Settings -> Secrets and variables -> Actions`, aggiungi:
+- `NPM_TOKEN`: token npm **granular** con permesso publish sul package `@nicola9779/nicalendar-custom` e bypass 2FA per automation.
+
+### 2) Publish su npm via GitHub Actions
+
+Workflow: `.github/workflows/publish-npm.yml`
+
+Trigger supportati:
+- manuale (`workflow_dispatch`)
+- automatico quando pubblichi una GitHub Release (`release.published`)
+
+Il workflow esegue:
+1. `npm ci`
+2. `npm run typecheck`
+3. `npm run test:run`
+4. `npm run build`
+5. `npm publish --access public --provenance`
+
+### 3) Storybook condivisibile online (GitHub Pages)
+
+Workflow: `.github/workflows/storybook-pages.yml`
+
+Trigger:
+- push su `main` (solo se cambiano file in `calendar/**`)
+- manuale (`workflow_dispatch`)
+
+Il workflow:
+1. builda Storybook (`npm run build-storybook`)
+2. pubblica `calendar/storybook-static` su GitHub Pages
+
+Dopo il primo deploy, abilita Pages in:
+- `Settings -> Pages -> Build and deployment -> Source: GitHub Actions`
+
+URL finale sarà tipicamente:
+- `https://nicolaviola-tech.github.io/nicalendar/`
+
+### 4) Flusso consigliato per release
 
 ```bash
 cd calendar
-npm login
-npm publish --access public
-```
-
-### GitHub
-
-```bash
-git tag -a v0.1.0 -m "Initial release"
+npm version patch
+git add .
+git commit -m "release: vX.Y.Z"
 git push origin main
-git push origin v0.1.0
 ```
 
-Poi crea una GitHub Release dal tag `v0.1.0`.
+Poi crea la GitHub Release dalla UI: partirà il publish npm automatico.

@@ -233,6 +233,16 @@ Open `http://localhost:6006`.
 npm run build-storybook
 ```
 
+### Publish Storybook online (GitHub Pages)
+
+Questo repository include il workflow:
+- `.github/workflows/storybook-pages.yml`
+
+Per abilitarlo:
+1. Push su `main` (o run manuale del workflow da Actions)
+2. In GitHub: `Settings -> Pages -> Source: GitHub Actions`
+3. Usa l'URL Pages del repository per condividere Storybook con il team
+
 ### Included stories
 
 - Default
@@ -268,6 +278,25 @@ npm run release
 ```
 
 Every release includes an explicit change type and bump reason.
+
+## npm Publish automation (recommended)
+
+Workflow:
+- `.github/workflows/publish-npm.yml`
+
+Requisito:
+- Secret GitHub `NPM_TOKEN` con permessi publish sul package scoped.
+
+Trigger:
+- manuale da Actions
+- automatico quando pubblichi una GitHub Release
+
+Comando locale consigliato prima di creare la release:
+
+```bash
+npm version patch
+git push origin main --follow-tags
+```
 
 ## Troubleshooting (important for local dev)
 
