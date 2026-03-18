@@ -101,7 +101,6 @@ const meta: Meta<typeof Calendar> = {
     statusOptions: controlsStatusOptions,
     priorityOptions: controlsPriorityOptions,
     typeOptions: controlsTypeOptions,
-    filters: controlsFilters,
     defaultFilters: {
       search: "",
       statuses: [],
@@ -290,6 +289,23 @@ export const InteractionFiltersEnabled: Story = {
     docs: {
       description: {
         story: "Use search/select/toggle controls and verify filtered event count and calendar cells update.",
+      },
+    },
+  },
+};
+
+export const InteractionCustomFilters: Story = {
+  name: "Interaction / Custom filters (example)",
+  args: {
+    events: mockEvents,
+    showFilters: true,
+    filters: controlsFilters,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Example with a custom filters array. Use this only if you want to replace the default filter layout.",
       },
     },
   },

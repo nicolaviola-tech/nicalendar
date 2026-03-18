@@ -144,6 +144,41 @@
   gap: 0.9rem;
 }
 
+.calendar-filter-row-primary {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.calendar-filter-row-primary .calendar-filter-item {
+  flex: 0 0 var(--calendar-filter-control-width, 18rem);
+  max-width: var(--calendar-filter-control-width, 18rem);
+  min-width: 13rem;
+}
+
+.calendar-filter-row-primary .calendar-input,
+.calendar-filter-row-primary .calendar-select,
+.calendar-filter-row-primary .calendar-button {
+  box-sizing: border-box;
+  height: 2.35rem;
+  line-height: 1.2;
+  min-width: 0;
+  width: 100%;
+}
+
+.calendar-filter-row-primary .calendar-filter-item-reset {
+  display: flex;
+  flex: 0 0 var(--calendar-filter-control-width, 18rem);
+  max-width: var(--calendar-filter-control-width, 18rem);
+  width: var(--calendar-filter-control-width, 18rem);
+}
+
+.calendar-filter-row-primary .calendar-filter-item-reset .calendar-button {
+  justify-content: center;
+  white-space: nowrap;
+  width: auto;
+}
+
 .calendar-filter-item {
   display: grid;
   gap: 0.18rem;

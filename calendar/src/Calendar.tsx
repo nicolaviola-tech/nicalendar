@@ -977,7 +977,13 @@ export function Calendar({
             {!filtersCollapsed && (
               <div id="calendar-filters-body" className="calendar-filters-body">
                 {filterRows.map((row, rowIndex) => (
-                  <div key={rowIndex} className={classes.filterRow}>
+                  <div
+                    key={rowIndex}
+                    className={cn(
+                      classes.filterRow,
+                      rowIndex === 0 ? "calendar-filter-row-primary" : "calendar-filter-row-secondary",
+                    )}
+                  >
                     {row.map((config) => (
                       <div key={config.id} className={classes.filterItem}>
                         {config.input !== "toggle" && (
