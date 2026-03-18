@@ -17,6 +17,7 @@ npm-debug.log*
 **/coverage/
 **/.turbo/
 **/.cache/
+**/storybook-static/
 
 # editor
 .vscode/

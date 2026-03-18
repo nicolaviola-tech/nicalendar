@@ -5,6 +5,7 @@ Reusable React calendar library with an opinionated default UI and full customiz
 ## What You Get
 
 - Views: `month`, `week`, `day`, `agenda`
+- Fully prop-driven data model (no internal fetching)
 - One main layout card by default:
   - filters section
   - calendar toolbar (`prev/today/next + month label + view tabs`)
@@ -211,7 +212,62 @@ type CalendarEvent = {
 ```bash
 npm run typecheck
 npm run build
+npm run test:run
 ```
+
+## Storybook
+
+Storybook is configured to document and test the calendar in isolation.
+
+### Run locally
+
+```bash
+npm run storybook
+```
+
+Open `http://localhost:6006`.
+
+### Build static docs
+
+```bash
+npm run build-storybook
+```
+
+### Included stories
+
+- Default
+- Empty state
+- Views: Month / Week / Day / Agenda
+- Interaction: event click handling, filters enabled
+- Edge cases: many events, only critical events, only completed events
+
+## Quality Gates
+
+Before release, the package runs:
+
+- TypeScript checks
+- Unit/integration tests with Vitest + React Testing Library
+- Build generation (`.mjs`, `.cjs`, `.d.ts`, `dist/styles.css`)
+
+`prepublishOnly` runs all checks automatically.
+
+## Versioning & Release Management
+
+This package follows strict semantic versioning:
+
+- `patch`: bug fixes only
+- `minor`: non-breaking improvements
+- `major`: breaking API changes
+
+Changes are tracked with **Changesets**:
+
+```bash
+npm run changeset
+npm run version-packages
+npm run release
+```
+
+Every release includes an explicit change type and bump reason.
 
 ## Troubleshooting (important for local dev)
 

@@ -500,7 +500,13 @@
 }
 
 .calendar-cell.is-muted {
-  opacity: 0.6;
+  opacity: 1;
+  background: #fbfcff;
+}
+
+.calendar-cell.is-muted .calendar-day-button {
+  color: #667085;
+  font-weight: 600;
 }
 
 .calendar-day-button {
@@ -612,8 +618,9 @@
 }
 
 .calendar-more {
-  color: var(--calendar-muted);
+  color: #52607b;
   font-size: 0.72rem;
+  font-weight: 500;
 }
 
 .calendar-list {

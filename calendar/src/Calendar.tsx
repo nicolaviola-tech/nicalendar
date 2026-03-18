@@ -109,6 +109,24 @@ function cn(...parts: Array<string | undefined | false>): string {
   return parts.filter(Boolean).join(" ");
 }
 
+function sanitizeText(value: unknown): string {
+  return String(value ?? "")
+    .replace(/[\u0000-\u001F\u007F]+/g, " ")
+    .trim();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function ensureArray<T>(value: unknown, fallback: T[]): T[] {
+  return Array.isArray(value) ? (value as T[]) : fallback;
+}
+
+function toSafeView(value: unknown): CalendarView {
+  return VIEW_OPTIONS.includes(value as CalendarView) ? (value as CalendarView) : "month";
+}
+
 function formatEventDate(date: Date, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
     weekday: "short",
@@ -398,18 +416,67 @@ export function Calendar({
   renderers,
   classNames,
 }: CalendarProps) {
-  const [view, setView] = useState<CalendarView>(initialView);
+  const safeEvents = useMemo<CalendarEvent[]>(() => (Array.isArray(events) ? events : []), [events]);
+  const safeStatusOptions = useMemo(
+    () => ensureArray<CalendarFilterOption<EventStatus>>(statusOptions, DEFAULT_STATUS_OPTIONS),
+    [statusOptions],
+  );
+  const safePriorityOptions = useMemo(
+    () => ensureArray<CalendarFilterOption<EventPriority>>(priorityOptions, DEFAULT_PRIORITY_OPTIONS),
+    [priorityOptions],
+  );
+  const safeTypeOptions = useMemo(
+    () => ensureArray<CalendarFilterOption<EventType>>(typeOptions, DEFAULT_TYPE_OPTIONS),
+    [typeOptions],
+  );
+  const safeFilters = useMemo<CalendarFilterConfig[] | undefined>(
+    () => (Array.isArray(filters) ? (filters as CalendarFilterConfig[]) : undefined),
+    [filters],
+  );
+  const safeSummaryCards = useMemo<CalendarSummaryCard[] | undefined>(
+    () => (Array.isArray(summaryCards) ? (summaryCards as CalendarSummaryCard[]) : undefined),
+    [summaryCards],
+  );
+  const safeLegendItems = useMemo<CalendarLegendItem[] | undefined>(
+    () => (Array.isArray(legendItems) ? (legendItems as CalendarLegendItem[]) : undefined),
+    [legendItems],
+  );
+  const safeVisibleEventsLabel = useMemo(
+    () =>
+      typeof visibleEventsLabel === "function"
+        ? visibleEventsLabel
+        : ((count: number) => `${count} visible events`),
+    [visibleEventsLabel],
+  );
+  const safeDefaultFilters = useMemo(
+    () => (isRecord(defaultFilters) ? defaultFilters : undefined),
+    [defaultFilters],
+  );
+  const safeTheme = useMemo(
+    () => (isRecord(theme) ? (theme as Partial<CalendarThemeTokens>) : undefined),
+    [theme],
+  );
+  const safeRenderers = useMemo(
+    () => (isRecord(renderers) ? renderers : undefined),
+    [renderers],
+  );
+  const safeClassNames = useMemo(
+    () => (isRecord(classNames) ? classNames : undefined),
+    [classNames],
+  );
+
+  const [view, setView] = useState<CalendarView>(toSafeView(initialView));
   const [activeDate, setActiveDate] = useState<Date>(startOfDay(initialDate));
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
 
   const filterConfigs = useMemo(
-    () => filters ?? getDefaultFilterConfigs(statusOptions, priorityOptions, typeOptions),
-    [filters, priorityOptions, statusOptions, typeOptions],
+    () => safeFilters ?? getDefaultFilterConfigs(safeStatusOptions, safePriorityOptions, safeTypeOptions),
+    [safeFilters, safePriorityOptions, safeStatusOptions, safeTypeOptions],
   );
 
   const initialFilterValues = useMemo(
-    () => buildInitialFilterValues(filterConfigs, defaultFilters),
-    [defaultFilters, filterConfigs],
+    () => buildInitialFilterValues(filterConfigs, safeDefaultFilters),
+    [safeDefaultFilters, filterConfigs],
   );
 
   const [filterValues, setFilterValues] = useState<CalendarFilterValues>(initialFilterValues);
@@ -428,11 +495,11 @@ export function Calendar({
   }, [filterValues, onFilterValuesChange]);
 
   const normalizedEvents = useMemo(() => {
-    return events.map((event) => ({
+    return safeEvents.map((event) => ({
       ...event,
       date: toDate(event.date),
     }));
-  }, [events]);
+  }, [safeEvents]);
 
   const filteredEvents = useMemo(() => {
     return normalizedEvents
@@ -443,7 +510,7 @@ export function Calendar({
             const search = (value as string).trim().toLowerCase();
             if (!search) return true;
             return [event.title, event.client, event.assignee].some((field) =>
-              field.toLowerCase().includes(search),
+              sanitizeText(field).toLowerCase().includes(search),
             );
           }
           if (config.bindTo === "onlyMine") {
@@ -513,25 +580,25 @@ export function Calendar({
   }, [activeDate, eventsByDay]);
 
   const summaryData = useMemo(() => {
-    return summaryCards ?? getDefaultSummaryCards(filteredEvents, weekStartsOn);
-  }, [filteredEvents, summaryCards, weekStartsOn]);
+    return safeSummaryCards ?? getDefaultSummaryCards(filteredEvents, weekStartsOn);
+  }, [filteredEvents, safeSummaryCards, weekStartsOn]);
 
   const resolvedLegendItems = useMemo<CalendarLegendItem[]>(() => {
-    if (legendItems) return legendItems;
+    if (safeLegendItems) return safeLegendItems;
     return [
       {
         id: "normal",
-        label: priorityOptions.find((item) => item.value === "normal")?.label ?? "Normal",
+        label: safePriorityOptions.find((item) => item.value === "normal")?.label ?? "Normal",
         color: priorityColors.normal ?? "var(--calendar-priority-normal)",
       },
       {
         id: "high",
-        label: priorityOptions.find((item) => item.value === "high")?.label ?? "High",
+        label: safePriorityOptions.find((item) => item.value === "high")?.label ?? "High",
         color: priorityColors.high ?? "var(--calendar-priority-high)",
       },
       {
         id: "critical",
-        label: priorityOptions.find((item) => item.value === "critical")?.label ?? "Critical",
+        label: safePriorityOptions.find((item) => item.value === "critical")?.label ?? "Critical",
         color: priorityColors.critical ?? "var(--calendar-priority-critical)",
       },
       {
@@ -545,13 +612,13 @@ export function Calendar({
         color: "#4f46e5",
       },
     ];
-  }, [legendItems, priorityColors.critical, priorityColors.high, priorityColors.normal, priorityOptions]);
+  }, [priorityColors.critical, priorityColors.high, priorityColors.normal, safeLegendItems, safePriorityOptions]);
 
   const label = rangeLabel(activeDate, view, locale, weekStartsOn);
-  const themeStyle = toThemeVariables(theme);
+  const themeStyle = toThemeVariables(safeTheme);
   const classes = useMemo(
-    () => ({ ...DEFAULT_CLASSNAMES, ...(classNames ?? {}) }),
-    [classNames],
+    () => ({ ...DEFAULT_CLASSNAMES, ...(safeClassNames ?? {}) }),
+    [safeClassNames],
   );
 
   const setFilterValue = useCallback((id: string, value: CalendarFilterValue) => {
@@ -603,7 +670,7 @@ export function Calendar({
   );
 
   const renderButton = (props: CalendarButtonRendererProps) => {
-    if (renderers?.Button) return renderers.Button(props);
+    if (safeRenderers?.Button) return safeRenderers.Button(props);
     return (
       <button
         type="button"
@@ -619,21 +686,22 @@ export function Calendar({
   };
 
   const renderInput = (props: CalendarInputRendererProps) => {
-    if (renderers?.Input) return renderers.Input(props);
+    if (safeRenderers?.Input) return safeRenderers.Input(props);
     return (
       <input
         type="text"
         className={props.className}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
-        placeholder={props.placeholder}
+        placeholder={sanitizeText(props.placeholder)}
         aria-label={props.ariaLabel}
       />
     );
   };
 
   const renderSelect = (props: CalendarSelectRendererProps) => {
-    if (renderers?.Select) return renderers.Select(props);
+    if (safeRenderers?.Select) return safeRenderers.Select(props);
+    const options = Array.isArray(props.options) ? props.options : [];
     return (
       <select
         className={props.className}
@@ -649,9 +717,9 @@ export function Calendar({
           }
         }}
       >
-        {props.options.map((option) => (
+        {options.map((option) => (
           <option key={option.value} value={option.value}>
-            {option.label}
+            {sanitizeText(option.label)}
           </option>
         ))}
       </select>
@@ -659,7 +727,7 @@ export function Calendar({
   };
 
   const renderSwitch = (props: CalendarSwitchRendererProps) => {
-    if (renderers?.Switch) return renderers.Switch(props);
+    if (safeRenderers?.Switch) return safeRenderers.Switch(props);
     return (
       <label className={props.className}>
         <input
@@ -668,7 +736,7 @@ export function Calendar({
           onChange={(event) => props.onChange(event.target.checked)}
           aria-label={props.ariaLabel}
         />
-        <span>{props.label}</span>
+        <span>{sanitizeText(props.label)}</span>
       </label>
     );
   };
@@ -681,8 +749,8 @@ export function Calendar({
         className: classes.input,
         value: typeof value === "string" ? value : "",
         onChange: (nextValue) => setFilterValue(config.id, nextValue),
-        placeholder: config.placeholder,
-        ariaLabel: config.label,
+        placeholder: sanitizeText(config.placeholder),
+        ariaLabel: sanitizeText(config.label),
       });
     }
 
@@ -691,8 +759,8 @@ export function Calendar({
         className: classes.switch,
         checked: Boolean(value),
         onChange: (checked) => setFilterValue(config.id, checked),
-        label: config.label,
-        ariaLabel: config.label,
+        label: sanitizeText(config.label),
+        ariaLabel: sanitizeText(config.label),
       });
     }
 
@@ -701,7 +769,7 @@ export function Calendar({
         className: classes.select,
         value: typeof value === "string" ? value : "",
         onChange: (nextValue) => setFilterValue(config.id, nextValue),
-        ariaLabel: config.label,
+        ariaLabel: sanitizeText(config.label),
         options: config.options ?? [],
       });
     }
@@ -713,20 +781,20 @@ export function Calendar({
         value: selected,
         multiple: true,
         onChange: (nextValue) => setFilterValue(config.id, nextValue),
-        ariaLabel: config.label,
+        ariaLabel: sanitizeText(config.label),
         options: config.options ?? [],
       });
     }
 
     if (config.input === "chips-single") {
       return (
-        <div className={classes.filterGroup} role="group" aria-label={config.label}>
+        <div className={classes.filterGroup} role="group" aria-label={sanitizeText(config.label)}>
           {config.options?.map((option) => (
             <React.Fragment key={option.value}>
-              {renderers?.Chip ? (
-                renderers.Chip({
+              {safeRenderers?.Chip ? (
+                safeRenderers.Chip({
                   className: cn(classes.chip, value === option.value && classes.chipSelected),
-                  label: option.label,
+                  label: sanitizeText(option.label),
                   color: option.color,
                   selected: value === option.value,
                   onClick: () => setFilterValue(config.id, option.value),
@@ -738,7 +806,7 @@ export function Calendar({
                   style={{ "--calendar-chip-color": option.color } as CSSProperties}
                   onClick={() => setFilterValue(config.id, option.value)}
                 >
-                  {option.label}
+                  {sanitizeText(option.label)}
                 </button>
               )}
             </React.Fragment>
@@ -748,16 +816,16 @@ export function Calendar({
     }
 
     return (
-      <div className={classes.filterGroup} role="group" aria-label={config.label}>
+      <div className={classes.filterGroup} role="group" aria-label={sanitizeText(config.label)}>
         {config.options?.map((option) => (
           <React.Fragment key={option.value}>
-            {renderers?.Chip ? (
-              renderers.Chip({
+            {safeRenderers?.Chip ? (
+              safeRenderers.Chip({
                 className: cn(
                   classes.chip,
                   Array.isArray(value) && value.includes(option.value) && classes.chipSelected,
                 ),
-                label: option.label,
+                label: sanitizeText(option.label),
                 color: option.color,
                 selected: Array.isArray(value) && value.includes(option.value),
                 onClick: () => toggleMulti(config.id, option.value),
@@ -772,7 +840,7 @@ export function Calendar({
                 style={{ "--calendar-chip-color": option.color } as CSSProperties}
                 onClick={() => toggleMulti(config.id, option.value)}
               >
-                {option.label}
+                {sanitizeText(option.label)}
               </button>
             )}
           </React.Fragment>
@@ -800,7 +868,7 @@ export function Calendar({
         className={classes.eventButton}
         style={eventStyle}
         onClick={() => onEventClick?.(eventItem)}
-        aria-label={`Open event ${eventItem.title}`}
+        aria-label={`Open event ${sanitizeText(eventItem.title)}`}
       >
         {renderEventContent ? (
           renderEventContent(eventItem)
@@ -808,17 +876,17 @@ export function Calendar({
           <span className={classes.eventContent}>
             <span className="calendar-event-main">
               <span className="calendar-event-marker-dot" style={{ background: eventColor }} />
-              <span className={classes.eventTitle}>{eventItem.title}</span>
+              <span className={classes.eventTitle}>{sanitizeText(eventItem.title)}</span>
             </span>
             <span className={classes.eventTime}>
-              {eventItem.start}-{eventItem.end}
+              {sanitizeText(eventItem.start)}-{sanitizeText(eventItem.end)}
             </span>
             {eventItem.tags && eventItem.tags.length > 0 && (
               <span className={classes.eventTags}>
                 {eventItem.tags.map((tag) => (
                   <React.Fragment key={tag.id}>
-                    {renderers?.EventTag ? (
-                      renderers.EventTag({
+                    {safeRenderers?.EventTag ? (
+                      safeRenderers.EventTag({
                         className: classes.eventTag,
                         label: tag.label,
                         color: tag.color,
@@ -834,7 +902,7 @@ export function Calendar({
                           } as CSSProperties
                         }
                       >
-                        {tag.label}
+                        {sanitizeText(tag.label)}
                       </span>
                     )}
                   </React.Fragment>
@@ -863,8 +931,8 @@ export function Calendar({
         <section className={classes.summaryGrid} aria-label="Summary cards">
           {summaryData.map((card) => (
             <React.Fragment key={card.id}>
-              {renderers?.StatCard ? (
-                renderers.StatCard({
+              {safeRenderers?.StatCard ? (
+                safeRenderers.StatCard({
                   className: classes.summaryCard,
                   label: card.label,
                   value: card.value,
@@ -872,7 +940,7 @@ export function Calendar({
                 })
               ) : (
                 <article className={classes.summaryCard}>
-                  <h3>{card.label}</h3>
+                  <h3>{sanitizeText(card.label)}</h3>
                   <p className="calendar-stat-number" style={{ color: card.color }}>
                     {card.value}
                   </p>
@@ -891,7 +959,7 @@ export function Calendar({
                 <span className="calendar-filters-icon">
                   <Filter size={15} strokeWidth={1.9} />
                 </span>
-                <span>Filters</span>
+                <span>{sanitizeText("Filters")}</span>
               </div>
               <button
                 type="button"
@@ -913,7 +981,7 @@ export function Calendar({
                     {row.map((config) => (
                       <div key={config.id} className={classes.filterItem}>
                         {config.input !== "toggle" && (
-                          <label className={classes.filterLabel}>{config.label}</label>
+                        <label className={classes.filterLabel}>{sanitizeText(config.label)}</label>
                         )}
                         {renderFilterControl(config)}
                       </div>
@@ -929,7 +997,7 @@ export function Calendar({
                           children: (
                             <>
                               <RotateCcw size={13} strokeWidth={1.9} />
-                              <span>Reset filtri</span>
+                              <span>{sanitizeText("Reset filtri")}</span>
                             </>
                           ),
                         })}
@@ -964,7 +1032,7 @@ export function Calendar({
                 children: <ChevronRight size={15} strokeWidth={1.75} />,
               })}
             </div>
-            <h2 className={classes.title}>{label}</h2>
+            <h2 className={classes.title}>{sanitizeText(label)}</h2>
           </div>
           <div className={classes.views} role="tablist" aria-label="Calendar views">
             {VIEW_OPTIONS.map((viewOption) => (
@@ -975,7 +1043,7 @@ export function Calendar({
                   role: "tab",
                   ariaSelected: view === viewOption,
                   onClick: () => setView(viewOption),
-                  children: viewOption.charAt(0).toUpperCase() + viewOption.slice(1),
+                  children: sanitizeText(viewOption.charAt(0).toUpperCase() + viewOption.slice(1)),
                 })}
               </React.Fragment>
             ))}
@@ -987,10 +1055,10 @@ export function Calendar({
             {resolvedLegendItems.map((item) => (
               <span key={item.id} className={classes.legendItem}>
                 <span className={classes.legendDot} style={{ background: item.color }} />
-                {item.label}
+                {sanitizeText(item.label)}
               </span>
             ))}
-            <span className={classes.visibleCount}>{visibleEventsLabel(filteredEvents.length)}</span>
+            <span className={classes.visibleCount}>{sanitizeText(safeVisibleEventsLabel(filteredEvents.length))}</span>
           </div>
         )}
 
@@ -1000,11 +1068,11 @@ export function Calendar({
             <div className={classes.weekdays} aria-hidden="true">
               {weekDayLabels.map((name) => (
                 <div key={name} className={classes.weekday}>
-                  {name}
+                  {sanitizeText(name)}
                 </div>
               ))}
             </div>
-            <div className={classes.monthGrid} role="grid" aria-label="Month view">
+            <div className={classes.monthGrid} aria-label="Month view">
               {monthDays.map((day) => {
                 const key = formatDayKey(day);
                 const dayEventsList = eventsByDay.get(key) ?? [];
@@ -1029,7 +1097,7 @@ export function Calendar({
                     <div className={classes.events}>
                       {dayEventsList.slice(0, 3).map(renderEvent)}
                       {dayEventsList.length > 3 && (
-                        <span className={classes.more}>+{dayEventsList.length - 3} more</span>
+                        <span className={classes.more}>{sanitizeText(`+${dayEventsList.length - 3} more`)}</span>
                       )}
                     </div>
                   </div>
@@ -1040,7 +1108,7 @@ export function Calendar({
         )}
 
         {view === "week" && (
-          <div className={classes.weekGrid} role="grid" aria-label="Week view">
+          <div className={classes.weekGrid} aria-label="Week view">
             {weekDays.map((day) => {
               const key = formatDayKey(day);
               const dayEventsList = eventsByDay.get(key) ?? [];
@@ -1067,14 +1135,16 @@ export function Calendar({
         {view === "day" && (
           <section className={classes.list} aria-label="Day view">
             <h3 className={classes.subtitle}>{formatEventDate(activeDate, locale)}</h3>
-            {dayEvents.length === 0 && <p className={classes.empty}>No events for this day.</p>}
+            {dayEvents.length === 0 && <p className={classes.empty}>{sanitizeText("No events for this day.")}</p>}
             {dayEvents.map(renderEvent)}
           </section>
         )}
 
         {view === "agenda" && (
           <section className={classes.list} aria-label="Agenda view">
-            {filteredEvents.length === 0 && <p className={classes.empty}>No events match current filters.</p>}
+            {filteredEvents.length === 0 && (
+              <p className={classes.empty}>{sanitizeText("No events match current filters.")}</p>
+            )}
             {filteredEvents.map(renderEvent)}
           </section>
         )}

@@ -228,7 +228,7 @@ export type CalendarClassNames = {
 export type CalendarEventColorMode = "priority" | "status" | "type" | "custom";
 
 export type CalendarProps = {
-  events: CalendarEvent[];
+  events?: CalendarEvent[];
   onEventClick?: (event: CalendarEvent) => void;
   onDateSelect?: (date: Date) => void;
   initialView?: CalendarView;
